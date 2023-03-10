@@ -102,8 +102,6 @@ public class NoteRepository {
         // TODO: Implement getRemote!
         // TODO: Set up polling background thread (MutableLiveData?)
         // TODO: Refer to TimerService from https://github.com/DylanLukes/CSE-110-WI23-Demo5-V2.
-        OkHttpClient client = new OkHttpClient();
-
         // Cancel any previous poller if it exists.
         if (this.poller != null && !this.poller.isCancelled()) {
             poller.cancel(true);
@@ -115,18 +113,8 @@ public class NoteRepository {
         MutableLiveData<Note> note = new MutableLiveData<>();
 
         this.poller = executor.scheduleAtFixedRate(() -> {
-            Request request = new Request.Builder()
-                    .url("https://sharednotes.goto.ucsd.edu/notes/" + title)
-                    .build();
-
-            try {
-                Response response = client.newCall(request).execute();
-                note.postValue(Note.fromJSON(response.body().string()));
-            } catch (IOException e) {
-
-            }
-
-
+            var currNote = NoteAPI.provide().getNote(title);
+            note.postValue(currNote);
         }, 0, 3000, TimeUnit.MILLISECONDS);
 
         // You may (but don't have to) want to cache the LiveData's for each title, so that
