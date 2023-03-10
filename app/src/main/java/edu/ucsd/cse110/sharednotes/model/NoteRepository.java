@@ -127,7 +127,13 @@ public class NoteRepository {
 
     public void upsertRemote(Note note) {
         // TODO: Implement upsertRemote!
-        NoteAPI.provide().putNote(note);
+        var executor = Executors.newSingleThreadScheduledExecutor();
+
+        executor.scheduleAtFixedRate(() -> {
+            NoteAPI.provide().putNote(note);
+        }, 0, 3000, TimeUnit.MILLISECONDS);
+
+
         //throw new UnsupportedOperationException("Not implemented yet");
     }
 }
