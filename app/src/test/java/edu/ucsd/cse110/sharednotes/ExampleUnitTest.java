@@ -17,9 +17,9 @@ public class ExampleUnitTest {
     NoteAPI t = new NoteAPI();
     @Test
     public void getNote() {
-        t.putNote(new Note("superincredibl", "this is a long note"));
+        t.putNote(new Note("lcardiel", "this is a long note"));
 
-        assertEquals("this is a long note", (t.getNote("superincredibl")).content);
+        assertEquals("this is a long note", (t.getNote("lcardiel")).content);
 
     }
 }
