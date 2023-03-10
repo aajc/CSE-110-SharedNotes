@@ -2,12 +2,22 @@ package edu.ucsd.cse110.sharednotes.model;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
+import com.google.gson.Gson;
+
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class NoteRepository {
     private final NoteDao dao;
@@ -31,7 +41,7 @@ public class NoteRepository {
      * @param title the title of the note
      * @return a LiveData object that will be updated when the note is updated locally or remotely.
      */
-    public LiveData<Note> getSynced(String title) {
+    public LiveData<Note> getSynced(String title) throws IOException  {
         var note = new MediatorLiveData<Note>();
 
         Observer<Note> updateFromRemote = theirNote -> {
@@ -88,10 +98,11 @@ public class NoteRepository {
     // Remote Methods
     // ==============
 
-    public LiveData<Note> getRemote(String title) {
+    public LiveData<Note> getRemote(String title) throws IOException {
         // TODO: Implement getRemote!
         // TODO: Set up polling background thread (MutableLiveData?)
         // TODO: Refer to TimerService from https://github.com/DylanLukes/CSE-110-WI23-Demo5-V2.
+        OkHttpClient client = new OkHttpClient();
 
         // Cancel any previous poller if it exists.
         if (this.poller != null && !this.poller.isCancelled()) {
@@ -99,12 +110,31 @@ public class NoteRepository {
         }
 
         // Set up a background thread that will poll the server every 3 seconds.
+        var executor = Executors.newSingleThreadScheduledExecutor();
+
+        MutableLiveData<Note> note = new MutableLiveData<>();
+
+        this.poller = executor.scheduleAtFixedRate(() -> {
+            Request request = new Request.Builder()
+                    .url("https://sharednotes.goto.ucsd.edu/notes/" + title)
+                    .build();
+
+            try {
+                Response response = client.newCall(request).execute();
+                note.postValue(Note.fromJSON(response.body().string()));
+            } catch (IOException e) {
+
+            }
+
+
+        }, 0, 3000, TimeUnit.MILLISECONDS);
 
         // You may (but don't have to) want to cache the LiveData's for each title, so that
         // you don't create a new polling thread every time you call getRemote with the same title.
         // You don't need to worry about killing background threads.
 
-        throw new UnsupportedOperationException("Not implemented yet");
+        //throw new UnsupportedOperationException("Not implemented yet");
+        return note;
     }
 
     public void upsertRemote(Note note) {

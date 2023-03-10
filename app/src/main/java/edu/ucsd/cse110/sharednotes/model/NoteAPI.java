@@ -11,8 +11,10 @@ import com.google.gson.Gson;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 
 public class NoteAPI {
     // TODO: Implement the API using OkHttp!
@@ -72,5 +74,55 @@ public class NoteAPI {
 
         // We can use future.get(1, SECONDS) to wait for the result.
         return future;
+    }
+
+    @WorkerThread
+    public Note getNote(String title) {
+        // URLs cannot contain spaces, so we replace them with %20.
+        String encodedMsg = title.replace(" ", "%20");
+
+        var request = new Request.Builder()
+                .url("https://sharednotes.goto.ucsd.edu/notes/" + encodedMsg)
+                .method("GET", null)
+                .build();
+
+        try (var response = client.newCall(request).execute()) {
+            assert response.body() != null;
+            var body = Note.fromJSON(response.body().string());
+            return body;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    @AnyThread
+    public Future<Note> getNoteAsync(String title) {
+        var executor = Executors.newSingleThreadExecutor();
+        var future = executor.submit(() -> getNote(title));
+
+        // We can use future.get(1, SECONDS) to wait for the result.
+        return future;
+    }
+
+    @WorkerThread
+    public Note putNote(Note note) {
+        // URLs cannot contain spaces, so we replace them with %20.
+        String noteJson = note.toJSON();
+
+        RequestBody body = RequestBody.create(noteJson, MediaType.get("application/json; charset=utf-8"));
+
+        var request = new Request.Builder()
+                .url("https://sharednotes.goto.ucsd.edu/notes/" + note.title)
+                .method("PUT", body)
+                .build();
+
+        try (var response = client.newCall(request).execute()) {
+            assert response.body() != null;
+            return note;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
